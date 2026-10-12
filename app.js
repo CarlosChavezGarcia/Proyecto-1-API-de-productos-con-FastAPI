@@ -1,15 +1,21 @@
+
 const API_URL = "http://127.0.0.1:8000/productos";
 
-// Selección de Elementos del DOM
+// Seleccion de elementos del DOM
 const formProducto = document.getElementById("formProducto");
 const tablaProductos = document.getElementById("tablaProductos");
 const totalProductos = document.getElementById("totalProductos");
 
 
-// 1. Función para Cargar Productos (GET)
+// 1. Funcion para cargar productos (GET)
 async function cargarProductos() {
     try {
         const respuesta = await fetch(API_URL);
+
+        if (!respuesta.ok) {
+            throw new Error("Error al cargar productos");
+        }
+
         const productos = await respuesta.json();
 
         tablaProductos.innerHTML = "";
@@ -19,31 +25,44 @@ async function cargarProductos() {
             tablaProductos.innerHTML = `
                 <tr>
                     <td colspan="5" class="text-center text-muted py-4">
-                        No hay productos registrados en la tiendita.
+                        No hay productos registrados en la tienda.
                     </td>
                 </tr>`;
             return;
         }
 
-        
-
         productos.forEach(p => {
             const fila = document.createElement("tr");
-            fila.innerHTML = `
-                <td class="fw-bold text-secondary">#${p.id}</td>
-                <td>${p.nombre}</td>
-                <td class="text-success fw-bold">$${p.precio}</td>
-                <td>
-                    <span class="badge ${p.cantidad < 10 ? 'bg-danger' : 'bg-success'}">
-                        ${p.cantidad} unidades
-                    </span>
-                </td>
-                <td class="text-end">
-                    <button class="btn btn-outline-danger btn-sm" onclick="eliminarProducto(${p.id})">
-                        <i class="bi bi-trash"></i> Eliminar
-                    </button>
-                </td>
-            `;
+
+            const celdaId = fila.insertCell();
+            const celdaNombre = fila.insertCell();
+            const celdaPrecio = fila.insertCell();
+            const celdaCantidad = fila.insertCell();
+            const celdaAcciones = fila.insertCell();
+
+            celdaId.textContent = `#${p.id}`;
+            celdaId.className = "fw-bold text-secondary";
+
+            celdaNombre.textContent = p.nombre;
+
+            celdaPrecio.textContent = `$${p.precio}`;
+            celdaPrecio.className = "text-success fw-bold";
+
+            const cantidad = document.createElement("span");
+            cantidad.className = `badge ${
+                p.cantidad < 10 ? "bg-danger" : "bg-success"
+            }`;
+            cantidad.textContent = `${p.cantidad} unidades`;
+            celdaCantidad.appendChild(cantidad);
+
+            celdaAcciones.className = "text-end";
+
+            const boton = document.createElement("button");
+            boton.className = "btn btn-outline-danger btn-sm";
+            boton.textContent = "Eliminar";
+            boton.addEventListener("click", () => eliminarProducto(p.id));
+
+            celdaAcciones.appendChild(boton);
             tablaProductos.appendChild(fila);
         });
 
@@ -52,52 +71,68 @@ async function cargarProductos() {
     }
 }
 
-async function agregarProducto(event){
+
+// 2. Funcion para agregar productos (POST)
+async function agregarProducto(event) {
     event.preventDefault();
 
-    var nombre = document.getElementById("nombre").value
-    var precio = document.getElementById("precio").value
-    var cantidad = document.getElementById("cantidad").value
+    const nombre = document.getElementById("nombre").value;
+    const precio = Number(document.getElementById("precio").value);
+    const cantidad = Number(document.getElementById("cantidad").value);
 
-    const nuevoContenido = {nombre, precio, cantidad}
+    const nuevoProducto = {
+        nombre,
+        precio,
+        cantidad
+    };
+
     try {
-        const respuesta = await fetch(API_URL, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(nuevoContenido)});
+        const respuesta = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(nuevoProducto)
+        });
 
-        if(respuesta){
-            formProducto.reset();
-            await cargarProductos();
-        }else{
-            console.error("Hubo algo malo al guardar")
+        if (!respuesta.ok) {
+            throw new Error("Error al guardar producto");
         }
+
+        formProducto.reset();
+        await cargarProductos();
+
     } catch (error) {
-        console.log(error)
+        console.error("Error al agregar producto:", error);
     }
 }
 
-async function eliminarProducto(id_producto){
-    event.preventDefault();
 
+// 3. Funcion para eliminar productos (DELETE)
+async function eliminarProducto(id_producto) {
     try {
-        const respuesta = await fetch("http://127.0.0.1:8000/productos/"+id_producto, {method: "DELETE", headers: {"Content-Type": "application/json"}});
+        const respuesta = await fetch(
+            `${API_URL}/${id_producto}`,
+            {
+                method: "DELETE"
+            }
+        );
 
-        if(respuesta){
-            await cargarProductos();
-        }else{
-            console.error("Hubo algo malo al eliminar")
+        if (!respuesta.ok) {
+            throw new Error("Error al eliminar producto");
         }
+
+        await cargarProductos();
+
     } catch (error) {
-        console.log(error)
+        console.error("Error al eliminar producto:", error);
     }
 }
 
 
-
-// Cargar catálogo al abrir la página
+// Cargar productos al abrir la pagina
 document.addEventListener("DOMContentLoaded", cargarProductos);
 
 
-// Agregamos el evento para que se abre la función al dar clic en guardar producto
-formProducto.addEventListener("submit", agregarProducto);
-
-
+// Registrar el evento del formulario una sola vez
 formProducto.addEventListener("submit", agregarProducto);
