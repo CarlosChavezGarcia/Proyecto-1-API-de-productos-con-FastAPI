@@ -11,6 +11,7 @@ const totalProductos = document.getElementById("totalProductos");
 async function cargarProductos() {
     try {
         const respuesta = await fetch(API_URL);
+        const producto = await respuesta.json();
 
         if (!respuesta.ok) {
             throw new Error("Error al cargar productos");
